@@ -1,0 +1,370 @@
+/* ============================================================
+   MEDISUPPLY — AUTH MODALS & ORDER CONFIRMATION STYLES
+   ============================================================ */
+
+/* ===== SHARED MODAL OVERLAY ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ===== MODAL PANEL ===== */
+.modal-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  width: 100%;
+  position: relative;
+  box-shadow: var(--shadow-xl), inset 0 1px 0 rgba(255,255,255,0.04);
+  animation: scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+/* ===== MODAL CLOSE BUTTON ===== */
+.modal-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 32px; height: 32px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: var(--t-base);
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+  transform: rotate(90deg);
+}
+
+/* ============================================================
+   AUTH MODAL
+   ============================================================ */
+.auth-modal-panel {
+  max-width: 440px;
+}
+
+/* Header */
+.auth-header {
+  padding: var(--space-8) var(--space-6) var(--space-5);
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(10, 132, 255, 0.05) 0%, transparent 100%);
+  border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+}
+
+.auth-logo {
+  display: block;
+  font-size: 48px;
+  margin-bottom: var(--space-4);
+  filter: drop-shadow(0 0 16px rgba(10, 132, 255, 0.5));
+}
+
+.auth-header h2 {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: var(--space-2);
+}
+
+.auth-header p {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+/* Tabs */
+.auth-tabs {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) 0;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 9px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--t-base);
+}
+
+.auth-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+  box-shadow: var(--shadow-primary);
+}
+
+.auth-tab:not(.active):hover {
+  background: var(--surface-4);
+  color: var(--text);
+}
+
+/* Forms */
+.auth-form {
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.form-group label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px var(--space-4);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text);
+  font-size: 14.5px;
+  outline: none;
+  transition: var(--t-base);
+}
+
+.form-group input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+  background: var(--surface-2);
+}
+
+.form-group input::placeholder {
+  color: var(--text-subtle);
+}
+
+/* Password wrapper */
+.input-wrapper {
+  position: relative;
+}
+
+.input-wrapper input {
+  padding-right: 46px;
+}
+
+.btn-show-pass {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  transition: var(--t-fast);
+  padding: 4px;
+  border-radius: var(--r-sm);
+}
+
+.btn-show-pass:hover { color: var(--text); background: var(--surface-4); }
+
+/* Error message */
+.form-error {
+  padding: 10px var(--space-4);
+  background: var(--danger-glow);
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  border-radius: var(--r-md);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Switch text */
+.auth-switch {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: var(--space-1);
+}
+
+.auth-link {
+  background: none;
+  border: none;
+  color: var(--info);
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+  transition: var(--t-fast);
+}
+
+.auth-link:hover { color: var(--primary-light); }
+
+/* ============================================================
+   ORDER CONFIRMATION MODAL
+   ============================================================ */
+.order-modal-panel {
+  max-width: 520px;
+}
+
+/* Success header */
+.order-success-header {
+  padding: var(--space-8) var(--space-6) var(--space-5);
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(48, 209, 88, 0.05) 0%, transparent 100%);
+  border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+}
+
+.success-icon {
+  display: block;
+  font-size: 60px;
+  margin-bottom: var(--space-4);
+  animation: bounce-in 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes bounce-in {
+  0%   { opacity: 0; transform: scale(0.3) rotate(-10deg); }
+  55%  { opacity: 1; transform: scale(1.15) rotate(2deg); }
+  75%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.order-success-header h2 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: var(--space-2);
+}
+
+.order-success-header p {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.order-success-header p strong { color: var(--text); }
+
+/* Order summary list */
+.order-summary {
+  padding: var(--space-4) var(--space-6);
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px var(--space-3);
+  background: var(--surface-3);
+  border-radius: var(--r-md);
+  font-size: 13px;
+}
+
+.order-item-name {
+  flex: 1;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-item-amount {
+  font-weight: 700;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+/* Total section */
+.order-total-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: rgba(48, 209, 88, 0.04);
+}
+
+.order-total-section > span:first-child {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.order-total-amount {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--secondary);
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+
+/* Info items */
+.order-info {
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.order-info-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 10px var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  line-height: 1.4;
+}
+
+.order-info-item span:first-child { font-size: 18px; flex-shrink: 0; }
+.order-info-item strong { color: var(--text); font-weight: 600; }
+
+/* Footer button */
+.order-modal-footer {
+  padding: var(--space-1) var(--space-6) var(--space-6);
+}
