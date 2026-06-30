@@ -435,3 +435,131 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== SPRINT 2 FILTERS ===== */
+.filters-panel {
+  margin: 0 var(--space-6) var(--space-5);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.filter-group label,
+.filter-group > span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filter-group input,
+.filter-group select {
+  min-height: 40px;
+  width: 100%;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text);
+  padding: 0 var(--space-3);
+  outline: none;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.availability-options {
+  display: flex;
+  gap: var(--space-1);
+  min-height: 40px;
+}
+
+.avail-btn,
+.btn-clear-filters {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-3);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: 700;
+  transition: var(--t-base);
+}
+
+.avail-btn {
+  padding: 0 var(--space-3);
+}
+
+.avail-btn.active,
+.avail-btn:hover,
+.btn-clear-filters:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.btn-clear-filters {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+}
+
+.active-filter-tags {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px 9px;
+  background: rgba(10, 132, 255, 0.1);
+  border: 1px solid rgba(10, 132, 255, 0.35);
+  border-radius: var(--r-full);
+  color: var(--info);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filter-tag button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+@media (max-width: 960px) {
+  .filters-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .filters-panel {
+    margin-inline: var(--space-4);
+    grid-template-columns: 1fr;
+  }
+
+  .availability-options {
+    flex-wrap: wrap;
+  }
+
+  .avail-btn {
+    flex: 1;
+    min-height: 38px;
+  }
+}

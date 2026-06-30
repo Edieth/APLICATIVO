@@ -28,15 +28,36 @@ const Cart = (() => {
   // ── Public API ─────────────────────────────────────────────
 
   function add(product, qty = 1) {
-    const existing = items.find(i => i.id === product.id);
+    // Verificar disponibilidad
+    if (product.stock !== undefined && product.stock <= 0) {
+      showToast('🚫 Este producto está agotado y no puede agregarse al carrito', 'error');
+      return;
+    }
+
+    const existing    = items.find(i => i.id === product.id);
+    const currentQty  = existing ? existing.qty : 0;
+    const maxStock    = product.stock ?? 99;
+
+    // Verificar límite de stock
+    if (currentQty + qty > maxStock) {
+      const available = maxStock - currentQty;
+      if (available <= 0) {
+        showToast(`⚠️ Ya tienes el máximo disponible (${maxStock}) en tu carrito`, 'error');
+        return;
+      }
+      qty = available;
+      showToast(`⚠️ Solo se agregaron ${qty} unidad${qty !== 1 ? 'es' : ''} (máximo disponible)`, 'info');
+    }
+
     if (existing) {
-      existing.qty = Math.min(99, existing.qty + qty);
+      existing.qty = Math.min(maxStock, existing.qty + qty);
     } else {
       items.push({
         id:    product.id,
         name:  product.name,
         price: product.price,
         image: product.image,
+        stock: product.stock,
         qty,
       });
     }
@@ -65,7 +86,13 @@ const Cart = (() => {
       remove(id);
       return;
     }
-    item.qty = Math.min(99, next);
+    const maxStock = item.stock ?? 99;
+    if (next > maxStock) {
+      showToast(`⚠️ Solo hay ${maxStock} unidad${maxStock !== 1 ? 'es' : ''} disponible${maxStock !== 1 ? 's' : ''}`, 'info');
+      item.qty = maxStock;
+    } else {
+      item.qty = next;
+    }
     save();
     render();
     updateBadge();
@@ -187,14 +214,14 @@ const Cart = (() => {
       if (e.target === e.currentTarget) close();
     });
 
-    // Buy button
+    // Buy button → requiere auth → formulario de envío → confirmación
     document.getElementById('btn-buy')?.addEventListener('click', () => {
       if (items.length === 0) {
         showToast('⚠️ Tu carrito está vacío', 'error');
         return;
       }
       close();
-      Auth.requireAuth(() => Order.show());
+      Auth.requireAuth(() => Shipping.open());
     });
 
     render();

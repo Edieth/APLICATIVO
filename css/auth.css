@@ -368,3 +368,205 @@
 .order-modal-footer {
   padding: var(--space-1) var(--space-6) var(--space-6);
 }
+
+/* ============================================================
+   SPRINT 2: RECOVERY, SHIPPING & HISTORY
+   ============================================================ */
+.forgot-link,
+.recovery-back {
+  align-self: center;
+}
+
+.recovery-progress {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6) 0;
+}
+
+.rprogress-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-full);
+  background: var(--surface-4);
+  border: 1px solid var(--border);
+}
+
+.rprogress-dot.active {
+  background: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-glow);
+}
+
+.rprogress-dot.done {
+  background: var(--success);
+}
+
+.recovery-help,
+.demo-code {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: var(--space-3);
+}
+
+.demo-code {
+  padding: 10px var(--space-4);
+  background: rgba(227, 179, 65, 0.1);
+  border: 1px solid rgba(227, 179, 65, 0.35);
+  border-radius: var(--r-md);
+  color: var(--warning);
+}
+
+.recovery-success {
+  text-align: center;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.recovery-success span {
+  font-size: 48px;
+}
+
+.recovery-success h3 {
+  color: var(--text);
+  font-size: 20px;
+}
+
+.recovery-success p {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.shipping-modal-panel {
+  max-width: 640px;
+}
+
+.shipping-form select {
+  width: 100%;
+  padding: 12px var(--space-4);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text);
+  font-size: 14.5px;
+  outline: none;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.shipping-total {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: rgba(48, 209, 88, 0.06);
+  border: 1px solid rgba(48, 209, 88, 0.24);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.shipping-total strong {
+  color: var(--secondary);
+  font-size: 20px;
+}
+
+.history-modal-panel {
+  max-width: 760px;
+}
+
+.history-list {
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  display: grid;
+  gap: var(--space-3);
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+.history-empty {
+  text-align: center;
+  padding: var(--space-10) var(--space-4);
+  color: var(--text-muted);
+}
+
+.history-empty span {
+  display: block;
+  font-size: 52px;
+  margin-bottom: var(--space-3);
+  opacity: 0.45;
+}
+
+.history-empty h3 {
+  color: var(--text);
+  margin-bottom: var(--space-1);
+}
+
+.history-order {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.history-order-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.history-order-header div {
+  display: grid;
+  gap: 2px;
+}
+
+.history-order-header span,
+.history-address {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.history-total {
+  color: var(--secondary);
+  font-size: 20px;
+}
+
+.history-items {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.history-item strong {
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.history-address {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+@media (max-width: 620px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .history-order-header,
+  .history-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
