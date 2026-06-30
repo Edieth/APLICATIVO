@@ -143,7 +143,6 @@ const Cart = (() => {
       return;
     }
 
-    // Build items HTML
     container.innerHTML = items.map(item => `
       <div class="cart-item" data-id="${item.id}">
         <img
@@ -162,19 +161,19 @@ const Cart = (() => {
           <div class="cart-item-qty">
             <button
               class="cart-qty-btn"
-              onclick="Cart.updateQty(${item.id}, -1)"
+              onclick="Cart.updateQty('${item.id}', -1)"
               aria-label="Disminuir cantidad de ${item.name}"
             >−</button>
             <span class="cart-qty-val" aria-label="Cantidad: ${item.qty}">${item.qty}</span>
             <button
               class="cart-qty-btn"
-              onclick="Cart.updateQty(${item.id}, 1)"
+              onclick="Cart.updateQty('${item.id}', 1)"
               aria-label="Aumentar cantidad de ${item.name}"
             >+</button>
           </div>
           <button
             class="cart-item-remove"
-            onclick="Cart.remove(${item.id})"
+            onclick="Cart.remove('${item.id}')"
             aria-label="Eliminar ${item.name} del carrito"
           >Eliminar</button>
         </div>
