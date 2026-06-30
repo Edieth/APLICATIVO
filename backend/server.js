@@ -37,11 +37,13 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/products') {
       const query = url.searchParams.get('query') || 'medical supplies';
       const limit = url.searchParams.get('limit') || '12';
+      console.info(`[API] Solicitud de productos recibida. Query: "${query}", Limit: ${limit}`);
       const products = await buildProducts({
         query,
         limit,
         pexelsApiKey: PEXELS_API_KEY,
       });
+      console.info(`[API] Retornando ${products.length} productos para query: "${query}"`);
 
       sendJson(res, 200, {
         query,
@@ -63,10 +65,26 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.info(`MediSupply backend escuchando en http://localhost:${PORT}`);
+let currentPort = PORT;
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.warn(`⚠️  [Servidor] El puerto ${currentPort} ya está en uso.`);
+    currentPort++;
+    console.warn(`🔄 [Servidor] Intentando iniciar en el puerto alternativo ${currentPort}...`);
+    server.listen(currentPort);
+  } else {
+    console.error(`❌ [Servidor] Error no controlado:`, err);
+    process.exit(1);
+  }
+});
+
+server.on('listening', () => {
+  console.info(`🚀 MediSupply backend escuchando en http://localhost:${currentPort}`);
   console.info(`Pexels configurado: ${PEXELS_API_KEY ? 'si' : 'no'}`);
 });
+
+server.listen(currentPort);
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {

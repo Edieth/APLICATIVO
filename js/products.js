@@ -140,8 +140,8 @@ const Products = (() => {
           id="product-${p.id}"
           tabindex="0" role="button"
           aria-label="Ver detalle de ${p.name}"
-          onclick="Products.openDetail(${p.id})"
-          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();Products.openDetail(${p.id})}"
+          onclick="Products.openDetail('${p.id}')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();Products.openDetail('${p.id}')}"
         >
           <div class="product-image-wrapper">
             <img src="${p.image}" alt="${p.name}" class="product-image" loading="lazy"
@@ -149,7 +149,7 @@ const Products = (() => {
             <div class="product-category-badge" style="color:${color}">${cat.icon} ${cat.name}</div>
             ${oos
               ? '<div class="oos-overlay">Agotado</div>'
-              : `<button class="product-quick-add" onclick="event.stopPropagation();Products.quickAdd(${p.id})" aria-label="Agregar al carrito" title="Agregar al carrito">+</button>`}
+              : `<button class="product-quick-add" onclick="event.stopPropagation();Products.quickAdd('${p.id}')" aria-label="Agregar al carrito" title="Agregar al carrito">+</button>`}
           </div>
 
           <div class="product-body">
@@ -163,7 +163,7 @@ const Products = (() => {
             <div class="product-price"><span class="currency">$</span>${p.price.toFixed(2)}</div>
             <button
               class="btn-add-to-cart${oos ? ' disabled-btn' : ''}"
-              onclick="event.stopPropagation();Products.quickAdd(${p.id})"
+              onclick="event.stopPropagation();Products.quickAdd('${p.id}')"
               id="add-btn-${p.id}"
               ${oos ? 'disabled aria-disabled="true"' : ''}
             >${oos ? '🚫 Agotado' : '🛒 Agregar'}</button>

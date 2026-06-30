@@ -125,16 +125,43 @@ export async function buildProducts({ query = 'medical supplies', limit = 12, pe
   );
 }
 
+function buildSearchTerm(query) {
+  const clean = String(query || '').trim().replace(/["']/g, '');
+  if (!clean) return '';
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    return `(${words[0]}*+OR+${words[0]})`;
+  }
+  return `(${words.join('+')})`;
+}
+
 async function fetchOpenFdaDrugLabels(query, limit) {
+  const term = buildSearchTerm(query);
+  if (!term) return [];
+
   const search = [
-    `openfda.brand_name:"${query}"`,
-    `openfda.generic_name:"${query}"`,
-    `purpose:"${query}"`,
-    `indications_and_usage:"${query}"`,
+    `openfda.brand_name:${term}`,
+    `openfda.generic_name:${term}`,
+    `purpose:${term}`,
+    `indications_and_usage:${term}`,
   ].join('+OR+');
 
   const url = `${OPENFDA_DRUG_LABEL_URL}?search=${encodeURIComponent(search)}&limit=${limit}`;
-  const data = await fetchJson(url);
+  let data;
+  try {
+    data = await fetchJson(url);
+  } catch (e) {
+    data = { results: [] };
+  }
+
+  if (!data.results || data.results.length === 0) {
+    const fallbackUrl = `${OPENFDA_DRUG_LABEL_URL}?search=openfda.brand_name:(medical+OR+health+OR+first+OR+care)&limit=${limit}`;
+    try {
+      data = await fetchJson(fallbackUrl);
+    } catch (e) {
+      data = { results: [] };
+    }
+  }
 
   return (data.results || []).map((item) => ({
     sourceType: 'openfda-drug-label',
@@ -157,14 +184,31 @@ async function fetchOpenFdaDrugLabels(query, limit) {
 }
 
 async function fetchOpenFdaDevices(query, limit) {
+  const term = buildSearchTerm(query);
+  if (!term) return [];
+
   const search = [
-    `device_name:"${query}"`,
-    `applicant:"${query}"`,
-    `statement_or_summary:"${query}"`,
+    `device_name:${term}`,
+    `applicant:${term}`,
+    `statement_or_summary:${term}`,
   ].join('+OR+');
 
   const url = `${OPENFDA_DEVICE_510K_URL}?search=${encodeURIComponent(search)}&limit=${limit}`;
-  const data = await fetchJson(url);
+  let data;
+  try {
+    data = await fetchJson(url);
+  } catch (e) {
+    data = { results: [] };
+  }
+
+  if (!data.results || data.results.length === 0) {
+    const fallbackUrl = `${OPENFDA_DEVICE_510K_URL}?search=device_name:(medical+OR+surgical+OR+care+OR+hospital)&limit=${limit}`;
+    try {
+      data = await fetchJson(fallbackUrl);
+    } catch (e) {
+      data = { results: [] };
+    }
+  }
 
   return (data.results || []).map((item) => ({
     sourceType: 'openfda-device-510k',
@@ -230,25 +274,35 @@ function translateMedicalQuery(query) {
     ['oximetro', 'oximeter'],
     ['tensiometro', 'blood pressure monitor'],
     ['estetoscopio', 'stethoscope'],
-    ['guante', 'medical gloves'],
-    ['guantes', 'medical gloves'],
-    ['mascarilla', 'medical mask'],
-    ['cubrebocas', 'medical mask'],
+    ['guante', 'glove'],
+    ['guantes', 'glove'],
+    ['mascarilla', 'mask'],
+    ['cubrebocas', 'mask'],
     ['gasa', 'gauze'],
     ['gasas', 'gauze'],
     ['venda', 'bandage'],
     ['vendas', 'bandage'],
-    ['aposito', 'wound dressing'],
-    ['apositos', 'wound dressing'],
+    ['aposito', 'dressing'],
+    ['apositos', 'dressing'],
     ['jeringa', 'syringe'],
     ['jeringas', 'syringe'],
     ['microscopio', 'microscope'],
-    ['tubo', 'specimen tube'],
-    ['tubos', 'specimen tube'],
+    ['tubo', 'tube'],
+    ['tubos', 'tube'],
     ['silla de ruedas', 'wheelchair'],
     ['muletas', 'crutches'],
     ['medicamento', 'drug'],
     ['medicamentos', 'drug'],
+    ['paracetamol', 'acetaminophen'],
+    ['ibuprofeno', 'ibuprofen'],
+    ['aspirina', 'aspirin'],
+    ['amoxicilina', 'amoxicillin'],
+    ['alcohol', 'alcohol'],
+    ['algodon', 'cotton'],
+    ['sonda', 'catheter'],
+    ['bisturi', 'scalpel'],
+    ['antiseptico', 'antiseptic'],
+    ['desinfectante', 'disinfectant'],
   ];
 
   const match = translations.find(([spanish]) => normalized.includes(spanish));
@@ -286,6 +340,10 @@ async function fetchJson(url, options = {}) {
       ...(options.headers || {}),
     },
   });
+
+  if (response.status === 404) {
+    return { results: [] };
+  }
 
   if (!response.ok) {
     const body = await response.text();
