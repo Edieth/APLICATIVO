@@ -7,6 +7,7 @@ const Cart = (() => {
 
   // ── State ──────────────────────────────────────────────────
   let items = [];
+  let remoteSyncPending = false;
 
   // ── Helpers ────────────────────────────────────────────────
   function load() {
@@ -19,6 +20,81 @@ const Cart = (() => {
 
   function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  }
+
+  function getDb() {
+    if (!window.firebase?.firestore) return null;
+    if (!window.__medisupplyFirestore) {
+      window.__medisupplyFirestore = window.firebase.firestore();
+    }
+    return window.__medisupplyFirestore;
+  }
+
+  async function saveToFirestore() {
+    const db = getDb();
+    const user = Auth.getCurrentUser();
+    if (!db || !user) return;
+
+    const userId = user.uid || user.id;
+    await db.collection('carts').doc(userId).set({
+      userUid: userId,
+      items: items.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        stock: item.stock,
+        qty: item.qty,
+      })),
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+  }
+
+  async function loadFromFirestore() {
+    const db = getDb();
+    const user = Auth.getCurrentUser();
+    if (!db || !user) return false;
+
+    const userId = user.uid || user.id;
+    const snapshot = await db.collection('carts').doc(userId).get();
+    if (!snapshot.exists) return false;
+
+    const data = snapshot.data() || {};
+    const remoteItems = Array.isArray(data.items) ? data.items : [];
+    items = remoteItems.map(item => ({ ...item }));
+    save();
+    return true;
+  }
+
+  async function syncWithFirestore() {
+    if (!Auth.isLoggedIn()) {
+      load();
+      render();
+      updateBadge();
+      return;
+    }
+
+    try {
+      const synced = await loadFromFirestore();
+      if (!synced) {
+        await saveToFirestore();
+      }
+      render();
+      updateBadge();
+    } catch (err) {
+      console.error('Error sincronizando carrito con Firestore:', err);
+    }
+  }
+
+  function persistToRemote() {
+    if (!Auth.isLoggedIn()) return;
+    if (remoteSyncPending) return;
+    remoteSyncPending = true;
+    saveToFirestore().catch(err => {
+      console.error('No se pudo guardar el carrito en Firestore:', err);
+    }).finally(() => {
+      remoteSyncPending = false;
+    });
   }
 
   function fmt(price) {
@@ -62,6 +138,7 @@ const Cart = (() => {
       });
     }
     save();
+    persistToRemote();
     render();
     updateBadge();
 
@@ -72,6 +149,7 @@ const Cart = (() => {
   function remove(id) {
     items = items.filter(i => i.id !== id);
     save();
+    persistToRemote();
     render();
     updateBadge();
   }
@@ -94,6 +172,7 @@ const Cart = (() => {
       item.qty = next;
     }
     save();
+    persistToRemote();
     render();
     updateBadge();
   }
@@ -101,6 +180,7 @@ const Cart = (() => {
   function clear() {
     items = [];
     save();
+    persistToRemote();
     render();
     updateBadge();
   }
@@ -203,6 +283,16 @@ const Cart = (() => {
   // ── Init ───────────────────────────────────────────────────
   function init() {
     load();
+
+    Auth.onAuthStateChanged?.((user) => {
+      if (user) {
+        syncWithFirestore();
+      } else {
+        load();
+        render();
+        updateBadge();
+      }
+    });
 
     // Open/close events
     document.getElementById('cart-btn')?.addEventListener('click', open);

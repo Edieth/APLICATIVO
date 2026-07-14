@@ -380,24 +380,30 @@ const Products = (() => {
    ORDER MODULE
    ============================================================ */
 const Order = (() => {
-  function show() {
+  async function show() {
     const user  = Auth.getCurrentUser();
     const items = Cart.getItems();
     const total = Cart.getTotal();
     const ship  = window._lastShippingData || {};
     if (!user || items.length === 0) return;
 
-    PurchaseHistory.save({
-      userEmail: user.email,
-      userName: ship.name || user.name,
-      email: ship.email || user.email,
-      address: ship.address
-        ? `${ship.address}, ${ship.city ? ship.city + ', ' : ''}${ship.state || ''} ${ship.zip || ''}`.trim()
-        : '',
-      items,
-      total,
-      createdAt: new Date().toISOString(),
-    });
+    try {
+      await PurchaseHistory.save({
+        userEmail: user.email,
+        userName: ship.name || user.name,
+        email: ship.email || user.email,
+        address: ship.address
+          ? `${ship.address}, ${ship.city ? ship.city + ', ' : ''}${ship.state || ''} ${ship.zip || ''}`.trim()
+          : '',
+        items,
+        total,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('No se pudo guardar el pedido:', err);
+      showToast('⚠️ No se pudo guardar el pedido en la base de datos. Intenta de nuevo.', 'error');
+      return;
+    }
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set('order-user-name',    ship.name  || user.name);
@@ -447,41 +453,56 @@ const Order = (() => {
    PURCHASE HISTORY MODULE
    ============================================================ */
 const PurchaseHistory = (() => {
-  const STORAGE_KEY = 'medisupply-order-history';
-
-  function loadAll() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-    catch { return []; }
+  function getDb() {
+    if (!window.firebase?.firestore) {
+      throw new Error('Firebase Firestore no está disponible.');
+    }
+    if (!window.__medisupplyFirestore) {
+      window.__medisupplyFirestore = window.firebase.firestore();
+    }
+    return window.__medisupplyFirestore;
   }
 
-  function saveAll(orders) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-  }
+  async function save(order) {
+    const user = Auth.getCurrentUser();
+    if (!user) throw new Error('Debes iniciar sesión para guardar tu pedido.');
 
-  function save(order) {
-    const orders = loadAll();
-    orders.unshift({
-      id: Date.now(),
-      ...order,
+    const payload = {
+      userUid: user.uid || user.id,
+      userEmail: user.email,
+      userName: order.userName || user.name,
+      email: order.email || user.email,
+      address: order.address || '',
       items: order.items.map(item => ({
         id: item.id,
         name: item.name,
         price: item.price,
         qty: item.qty,
       })),
-    });
-    saveAll(orders);
+      total: Number(order.total || 0),
+      createdAt: order.createdAt || new Date().toISOString(),
+      status: 'completed',
+    };
+
+    const ref = await getDb().collection('orders').add(payload);
+    return { id: ref.id, ...payload };
   }
 
-  function getCurrentUserOrders() {
+  async function getCurrentUserOrders() {
     const user = Auth.getCurrentUser();
     if (!user) return [];
-    return loadAll().filter(order => order.userEmail === user.email);
+
+    const userUid = user.uid || user.id;
+    const snapshot = await getDb().collection('orders').where('userUid', '==', userUid).get();
+
+    return snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
   function open() {
-    Auth.requireAuth(() => {
-      render();
+    Auth.requireAuth(async () => {
+      await render();
       const modal = document.getElementById('history-modal');
       if (modal) {
         modal.classList.add('open');
@@ -496,48 +517,66 @@ const PurchaseHistory = (() => {
     document.body.style.overflow = '';
   }
 
-  function render() {
+  async function render() {
     const list = document.getElementById('history-list');
     if (!list) return;
-    const orders = getCurrentUserOrders();
 
-    if (orders.length === 0) {
+    list.innerHTML = `
+      <div class="history-empty">
+        <span aria-hidden="true">📋</span>
+        <h3>Cargando tus compras…</h3>
+        <p>Estamos consultando tu historial en la base de datos.</p>
+      </div>`;
+
+    try {
+      const orders = await getCurrentUserOrders();
+
+      if (orders.length === 0) {
+        list.innerHTML = `
+          <div class="history-empty">
+            <span aria-hidden="true">📋</span>
+            <h3>Aún no tienes compras</h3>
+            <p>Cuando confirmes un pedido, aparecerá en esta sección.</p>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = orders.map(order => {
+        const date = new Date(order.createdAt).toLocaleString('es', {
+          year: 'numeric',
+          month: 'short',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        return `
+          <article class="history-order">
+            <div class="history-order-header">
+              <div>
+                <strong>Pedido #${order.id}</strong>
+                <span>${date}</span>
+              </div>
+              <strong class="history-total">$${Number(order.total || 0).toFixed(2)}</strong>
+            </div>
+            <div class="history-items">
+              ${order.items.map(item => `
+                <div class="history-item">
+                  <span>${item.qty}× ${item.name}</span>
+                  <strong>$${(item.price * item.qty).toFixed(2)}</strong>
+                </div>`).join('')}
+            </div>
+            ${order.address ? `<p class="history-address">Entrega: ${order.address}</p>` : ''}
+          </article>`;
+      }).join('');
+    } catch (err) {
+      console.error('Error cargando historial:', err);
       list.innerHTML = `
         <div class="history-empty">
-          <span aria-hidden="true">📋</span>
-          <h3>Aún no tienes compras</h3>
-          <p>Cuando confirmes un pedido, aparecerá en esta sección.</p>
+          <span aria-hidden="true">⚠️</span>
+          <h3>No se pudo cargar el historial</h3>
+          <p>Revisa tu conexión o la configuración de Firestore.</p>
         </div>`;
-      return;
     }
-
-    list.innerHTML = orders.map(order => {
-      const date = new Date(order.createdAt).toLocaleString('es', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      return `
-        <article class="history-order">
-          <div class="history-order-header">
-            <div>
-              <strong>Pedido #${order.id}</strong>
-              <span>${date}</span>
-            </div>
-            <strong class="history-total">$${order.total.toFixed(2)}</strong>
-          </div>
-          <div class="history-items">
-            ${order.items.map(item => `
-              <div class="history-item">
-                <span>${item.qty}× ${item.name}</span>
-                <strong>$${(item.price * item.qty).toFixed(2)}</strong>
-              </div>`).join('')}
-          </div>
-          ${order.address ? `<p class="history-address">Entrega: ${order.address}</p>` : ''}
-        </article>`;
-    }).join('');
   }
 
   function init() {
