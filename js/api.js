@@ -119,6 +119,44 @@ function normalizeFdaProduct(item, index) {
   };
 }
 
+/* ───────────────────────────────────────────────────────────
+   Firebase Enrichment
+─────────────────────────────────────────────────────────── */
+async function enrichWithFirebaseImages(products) {
+  if (typeof window.db === 'undefined') {
+    console.warn('⚠️ Firebase db no está inicializado. Mostrando imágenes por defecto.');
+    return products;
+  }
+  
+  try {
+    // Consultamos concurrentemente la imagen para cada producto
+    const enrichmentPromises = products.map(async (p) => {
+      try {
+        const docRef = window.db.collection('product_enrichment').doc(p.id);
+        const docSnap = await docRef.get();
+        
+        if (docSnap.exists) {
+          const data = docSnap.data();
+          if (data.imageUrl) {
+            p.image = data.imageUrl;
+          }
+          // Opcional: sobreescribir otros datos si existen
+          if (data.customName) p.name = data.customName;
+          if (data.customDescription) p.description = data.customDescription;
+        }
+      } catch (err) {
+        // Silenciamos errores individuales (ej. falta de permisos o config inválida)
+      }
+      return p;
+    });
+    
+    return await Promise.all(enrichmentPromises);
+  } catch (error) {
+    console.error('Error al enriquecer productos desde Firebase:', error);
+    return products;
+  }
+}
+
 async function fetchMedicalProducts() {
   try {
     const response = await fetch('http://localhost:3000/api/products?limit=24');
@@ -126,7 +164,21 @@ async function fetchMedicalProducts() {
     const data = await response.json();
     if (data && data.products && data.products.length > 0) {
       console.info(`✅ MediSupply: ${data.products.length} productos obtenidos del backend local.`);
-      return data.products;
+      
+      // Mapeamos los productos para extraer la URL de la imagen (el backend puede enviar un objeto o null)
+      const mappedProducts = data.products.map(p => {
+        let imageUrl = '';
+        if (p.image && typeof p.image === 'object' && p.image.url) {
+          imageUrl = p.image.url;
+        } else if (typeof p.image === 'string') {
+          imageUrl = p.image;
+        } else {
+          imageUrl = `https://placehold.co/500x500/${getColorHex(p.category)}/FFFFFF?text=${encodeURIComponent(CATEGORY_INFO[p.category]?.icon || '🏥')}`;
+        }
+        return { ...p, image: imageUrl };
+      });
+
+      return await enrichWithFirebaseImages(mappedProducts);
     }
     throw new Error('El backend no retornó productos válidos');
   } catch (error) {
@@ -142,7 +194,7 @@ async function fetchMedicalProducts() {
       
       const mapped = fdaData.results.map((item, index) => normalizeFdaProduct(item, index));
       console.info(`✅ MediSupply: ${mapped.length} productos cargados directamente desde la API de openFDA.`);
-      return mapped;
+      return await enrichWithFirebaseImages(mapped);
     } catch (fdaError) {
       console.error('❌ Error crítico: no se pudo cargar ningún producto de openFDA ni del backend.', fdaError);
       const emergencyFallbacks = [
