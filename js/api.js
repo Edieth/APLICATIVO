@@ -164,6 +164,7 @@ async function fetchMedicalProducts() {
     const data = await response.json();
     if (data && data.products && data.products.length > 0) {
       console.info(`✅ MediSupply: ${data.products.length} productos obtenidos del backend local.`);
+      console.table(data.products, ['id', 'name']);
       
       // Mapeamos los productos para extraer la URL de la imagen (el backend puede enviar un objeto o null)
       const mappedProducts = data.products.map(p => {
@@ -194,6 +195,7 @@ async function fetchMedicalProducts() {
       
       const mapped = fdaData.results.map((item, index) => normalizeFdaProduct(item, index));
       console.info(`✅ MediSupply: ${mapped.length} productos cargados directamente desde la API de openFDA.`);
+      console.table(mapped, ['id', 'name']);
       return await enrichWithFirebaseImages(mapped);
     } catch (fdaError) {
       console.error('❌ Error crítico: no se pudo cargar ningún producto de openFDA ni del backend.', fdaError);
