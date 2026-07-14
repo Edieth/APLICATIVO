@@ -102,22 +102,38 @@
 
 /* Tabs */
 .auth-tabs {
-  display: flex;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-6) 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-6) var(--space-5);
 }
 
 .auth-tab {
-  flex: 1;
-  padding: 9px;
+  padding: 14px var(--space-4);
   background: var(--surface-3);
   border: 1px solid var(--border);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: var(--t-base);
+  transition: all 0.28s ease;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+}
+
+.auth-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+  box-shadow: var(--shadow-primary);
+}
+
+.auth-tab:not(.active):hover {
+  background: var(--surface-4);
+  border-color: var(--primary-muted);
+  color: var(--text);
 }
 
 .auth-tab.active {
@@ -133,6 +149,20 @@
 }
 
 /* Forms */
+.auth-screen {
+  display: none;
+  animation: fade-in 0.28s ease;
+}
+
+.auth-screen:not([hidden]) {
+  display: block;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .auth-form {
   padding: var(--space-5) var(--space-6) var(--space-6);
   display: flex;
