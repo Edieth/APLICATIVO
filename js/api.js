@@ -131,21 +131,33 @@ async function enrichWithFirebaseImages(products) {
   try {
     // Consultamos concurrentemente la imagen para cada producto
     const enrichmentPromises = products.map(async (p) => {
+      // 1. Intentar obtener la imagen directamente de Firebase Storage primero
+      let storageUrl = null;
+      if (window.storage) {
+        try {
+          storageUrl = await window.storage.ref(`products/${p.id}.jpg`).getDownloadURL();
+          p.image = storageUrl;
+        } catch (storageErr) {
+          // No existe la imagen en storage o hay error de CORS/permisos, continuamos con Firestore
+        }
+      }
+
+      // 2. Si no hay imagen en Storage o para obtener metadatos extra, consultar Firestore
       try {
         const docRef = window.db.collection('product_enrichment').doc(p.id);
         const docSnap = await docRef.get();
         
         if (docSnap.exists) {
           const data = docSnap.data();
-          if (data.imageUrl) {
+          // Si no encontramos imagen en Storage, usamos la de Firestore si existe
+          if (!storageUrl && data.imageUrl) {
             p.image = data.imageUrl;
           }
-          // Opcional: sobreescribir otros datos si existen
           if (data.customName) p.name = data.customName;
           if (data.customDescription) p.description = data.customDescription;
         }
       } catch (err) {
-        // Silenciamos errores individuales (ej. falta de permisos o config inválida)
+        // Silenciamos errores de Firestore
       }
       return p;
     });

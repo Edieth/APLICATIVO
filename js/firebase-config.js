@@ -14,6 +14,7 @@ const firebaseConfig = {
 if (typeof firebase !== 'undefined') {
   firebase.initializeApp(firebaseConfig);
   window.db = firebase.firestore();
+  window.storage = firebase.storage();
   console.info("✅ Firebase SDK configurado.");
 } else {
   console.error("❌ Firebase SDK no se cargó correctamente.");
