@@ -52,17 +52,17 @@ function updateDocument(id, url) {
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          console.log(`✅ ${id} actualizado`);
+          console.log(`${id} actualizado`);
           resolve();
         } else {
-          console.error(`❌ ${id} falló: ${res.statusCode} - ${data}`);
+          console.error(`${id} fallo: ${res.statusCode} - ${data}`);
           resolve(); // Resolve to continue loop
         }
       });
     });
 
     req.on('error', (e) => {
-      console.error(`❌ ${id} error de red: ${e.message}`);
+      console.error(`${id} error de red: ${e.message}`);
       resolve();
     });
 

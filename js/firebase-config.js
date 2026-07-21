@@ -1,21 +1,40 @@
-// js/firebase-config.js
-// Firebase SDK Configuration (Compat version for non-module usage)
+/* ============================================================
+   MEDISUPPLY - FIREBASE CONFIG
+   Fuente unica de configuracion e inicializacion Firebase.
+   ============================================================ */
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBPo10S3oQ0yGewYsi-PBu4nezYbzG4vcI",
-  authDomain: "insumosmedicos-3079b.firebaseapp.com",
-  projectId: "insumosmedicos-3079b",
-  storageBucket: "insumosmedicos-3079b.firebasestorage.app",
-  messagingSenderId: "907574552390",
-  appId: "1:907574552390:web:f721cc992132156733a747"
+  apiKey: 'AIzaSyBPo10S3oQ0yGewYsi-PBu4nezYbzG4vcI',
+  authDomain: 'insumosmedicos-3079b.firebaseapp.com',
+  projectId: 'insumosmedicos-3079b',
+  storageBucket: 'insumosmedicos-3079b.firebasestorage.app',
+  messagingSenderId: '907574552390',
+  appId: '1:907574552390:web:f721cc992132156733a747',
 };
 
-// Initialize Firebase
-if (typeof firebase !== 'undefined') {
-  firebase.initializeApp(firebaseConfig);
-  window.db = firebase.firestore();
-  window.storage = firebase.storage();
-  console.info("✅ Firebase SDK configurado.");
-} else {
-  console.error("❌ Firebase SDK no se cargó correctamente.");
+if (typeof firebase === 'undefined') {
+  throw new Error('Firebase SDK no se cargo correctamente.');
 }
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+window.firebaseApp = firebase.app();
+window.auth = firebase.auth();
+window.db = firebase.firestore();
+window.storage = typeof firebase.storage === 'function' ? firebase.storage() : null;
+
+window.getFirebaseAuth = function getFirebaseAuth() {
+  return window.auth;
+};
+
+window.getFirestoreDb = function getFirestoreDb() {
+  return window.db;
+};
+
+window.getFirebaseStorage = function getFirebaseStorage() {
+  return window.storage;
+};
+
+console.info('Firebase inicializado correctamente.');

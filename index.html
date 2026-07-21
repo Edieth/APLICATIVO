@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -273,156 +273,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ===== AUTH MODAL ===== -->
-  <div class="modal-overlay" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-    <div class="modal-panel auth-modal-panel">
-      <button class="modal-close" id="auth-modal-close" aria-label="Cerrar ventana de acceso">✕</button>
-      <div class="auth-header">
-        <span class="auth-logo" aria-hidden="true">⚕️</span>
-        <h2 id="auth-modal-title">Accede a tu cuenta</h2>
-        <p>Para continuar con tu compra, inicia sesión o crea una cuenta gratuita</p>
-      </div>
-      <div class="auth-tabs" role="tablist">
-        <a href="#" class="auth-tab active" id="tab-login" data-tab="login" role="tab" aria-selected="true">
-          Iniciar Sesión
-        </a>
-        <a href="#" class="auth-tab" id="tab-register" data-tab="register" role="tab" aria-selected="false">
-          Crear Cuenta
-        </a>
-      </div>
-
-      <div id="login-screen" class="auth-screen">
-        <form class="auth-form" id="login-form" autocomplete="on" novalidate>
-          <div class="form-group">
-            <label for="login-email">Correo Electrónico</label>
-            <input type="email" id="login-email" name="email" placeholder="correo@ejemplo.com" required autocomplete="email">
-          </div>
-          <div class="form-group">
-            <label for="login-password">Contraseña</label>
-            <div class="input-wrapper">
-              <input type="password" id="login-password" name="password" placeholder="••••••••" required autocomplete="current-password">
-              <button type="button" class="btn-show-pass" data-target="login-password" aria-label="Mostrar contraseña">👁</button>
-            </div>
-          </div>
-          <div class="form-error" id="login-error" hidden role="alert"></div>
-          <button type="submit" class="btn-primary-full" id="btn-login">
-            <span>Iniciar Sesión</span>
-          </button>
-          <button type="button" class="auth-link forgot-link" id="btn-forgot-password">
-            ¿Olvidaste tu contraseña?
-          </button>
-          <p class="auth-switch">
-            ¿No tienes cuenta?
-            <button type="button" class="auth-link" onclick="Auth.switchTabPublic('register')">Regístrate gratis</button>
-          </p>
-        </form>
-      </div>
-
-      <div id="register-screen" class="auth-screen" hidden>
-        <form class="auth-form" id="register-form" autocomplete="on" novalidate>
-          <div class="form-group">
-            <label for="reg-name">Nombre Completo</label>
-            <input type="text" id="reg-name" name="name" placeholder="Dr. Juan Pérez" required autocomplete="name">
-          </div>
-          <div class="form-group">
-            <label for="reg-email">Correo Electrónico</label>
-            <input type="email" id="reg-email" name="email" placeholder="correo@ejemplo.com" required autocomplete="email">
-          </div>
-          <div class="form-group">
-            <label for="reg-password">Contraseña</label>
-            <div class="input-wrapper">
-              <input type="password" id="reg-password" name="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" minlength="8">
-              <button type="button" class="btn-show-pass" data-target="reg-password" aria-label="Mostrar contraseña">👁</button>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="reg-confirm">Confirmar Contraseña</label>
-            <div class="input-wrapper">
-              <input type="password" id="reg-confirm" name="confirm" placeholder="Repite tu contraseña" required autocomplete="new-password">
-              <button type="button" class="btn-show-pass" data-target="reg-confirm" aria-label="Mostrar contraseña">👁</button>
-            </div>
-          </div>
-          <div class="form-error" id="register-error" hidden role="alert"></div>
-          <button type="submit" class="btn-primary-full" id="btn-register">
-            <span>Crear Cuenta Gratuita</span>
-          </button>
-          <p class="auth-switch">
-            ¿Ya tienes cuenta?
-            <button type="button" class="auth-link" onclick="Auth.switchTabPublic('login')">Inicia sesión</button>
-          </p>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== PASSWORD RECOVERY MODAL ===== -->
-  <div class="modal-overlay" id="recovery-modal" role="dialog" aria-modal="true" aria-labelledby="recovery-modal-title">
-    <div class="modal-panel auth-modal-panel">
-      <button class="modal-close" id="recovery-modal-close" aria-label="Cerrar recuperación de contraseña">✕</button>
-      <div class="auth-header">
-        <span class="auth-logo" aria-hidden="true">🔐</span>
-        <h2 id="recovery-modal-title">Recuperar contraseña</h2>
-        <p>Recibirás un enlace seguro por correo para restablecer tu contraseña.</p>
-      </div>
-      <div class="recovery-progress" aria-hidden="true">
-        <span class="rprogress-dot active"></span>
-        <span class="rprogress-dot"></span>
-        <span class="rprogress-dot"></span>
-        <span class="rprogress-dot"></span>
-      </div>
-
-      <form class="auth-form" id="recovery-email-form">
-        <div id="recovery-step-1">
-          <div class="form-group">
-            <label for="recovery-email">Correo Electrónico</label>
-            <input type="email" id="recovery-email" placeholder="correo@ejemplo.com" required autocomplete="email">
-          </div>
-          <div class="form-error" id="recovery-email-error" hidden role="alert"></div>
-          <button type="submit" class="btn-primary-full" id="btn-send-code">Enviar enlace</button>
-          <button type="button" class="auth-link recovery-back" id="btn-back-to-login">Volver al inicio de sesión</button>
-        </div>
-      </form>
-
-      <form class="auth-form" id="recovery-code-form" hidden>
-        <div id="recovery-step-2">
-          <p class="recovery-help">Revisa tu correo en <strong id="recovery-email-display"></strong>.</p>
-          <div class="demo-code">No necesitas ingresar ningún código manual.</div>
-          <div class="form-group">
-            <label for="recovery-code-input">Código de recuperación</label>
-            <input type="text" id="recovery-code-input" inputmode="numeric" maxlength="6" placeholder="123456" required hidden>
-          </div>
-          <div class="form-error" id="recovery-code-error" hidden role="alert"></div>
-          <button type="submit" class="btn-primary-full">Validar código</button>
-        </div>
-      </form>
-
-      <form class="auth-form" id="recovery-password-form" hidden>
-        <div id="recovery-step-3">
-          <div class="form-group">
-            <label for="recovery-new-password">Nueva contraseña</label>
-            <input type="password" id="recovery-new-password" minlength="8" placeholder="Mínimo 8 caracteres" required>
-          </div>
-          <div class="form-group">
-            <label for="recovery-confirm-password">Confirmar contraseña</label>
-            <input type="password" id="recovery-confirm-password" placeholder="Repite tu contraseña" required>
-          </div>
-          <div class="form-error" id="recovery-password-error" hidden role="alert"></div>
-          <button type="submit" class="btn-primary-full">Cambiar contraseña</button>
-        </div>
-      </form>
-
-      <div class="auth-form" id="recovery-step-4" hidden>
-        <div class="recovery-success">
-          <span aria-hidden="true">✅</span>
-          <h3>Contraseña actualizada</h3>
-          <p>Ya puedes iniciar sesión con tu nueva contraseña.</p>
-        </div>
-        <button type="button" class="btn-primary-full" id="btn-recovery-go-login">Ir a iniciar sesión</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ===== SHIPPING MODAL ===== -->
   <div class="modal-overlay" id="shipping-modal" role="dialog" aria-modal="true" aria-labelledby="shipping-modal-title">
     <div class="modal-panel shipping-modal-panel">
@@ -559,3 +409,4 @@
   <script src="js/products.js"></script>
 </body>
 </html>
+

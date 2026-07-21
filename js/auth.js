@@ -1,79 +1,26 @@
 /* ============================================================
-   MEDISUPPLY — AUTH MODULE
-   - Registro / Login con Firebase Auth
-   - Recuperación de contraseña con tokens seguros de Firebase
-   - Perfil de usuario almacenado en Firestore
+   MEDISUPPLY - AUTH MODULE
+   Firebase Auth + Firestore user profile
    ============================================================ */
 
 const Auth = (() => {
-  const ADMIN_EMAIL    = 'admin@medisupply.com';
-  const ADMIN_PASSWORD = 'Admin2024';
+  const REDIRECT_KEY = 'medisupply-auth-redirect';
+  const INTENT_KEY = 'medisupply-auth-intent';
 
-  let successCallback = null;
   let currentUser = null;
-  let pendingResetActionCode = null;
-  let pendingResetEmail = null;
-  let firebaseReady = false;
-  let firebaseAuth = null;
-  let firebaseDb = null;
   let authStateListeners = [];
+  let initialized = false;
 
-  function initFirebase() {
-    if (firebaseReady) return { auth: firebaseAuth, db: firebaseDb };
-
-    if (!window.firebase?.apps?.length) {
-      const firebaseConfig = {
-        apiKey: 'AIzaSyBPo10S3oQ0yGewYsi-PBu4nezYbzG4vcI',
-        authDomain: 'insumosmedicos-3079b.firebaseapp.com',
-        projectId: 'insumosmedicos-3079b',
-        storageBucket: 'insumosmedicos-3079b.firebasestorage.app',
-        messagingSenderId: '907574552390',
-        appId: '1:907574552390:web:f721cc992132156733a747'
-      };
-      window.firebase.initializeApp(firebaseConfig);
-    }
-
-    firebaseAuth = window.firebase.auth();
-    firebaseDb = window.firebase.firestore();
-    firebaseReady = true;
-
-    return { auth: firebaseAuth, db: firebaseDb };
+  function getAuth() {
+    if (typeof window.getFirebaseAuth === 'function') return window.getFirebaseAuth();
+    if (window.auth) return window.auth;
+    throw new Error('Firebase Auth no esta disponible.');
   }
 
-  function getFirebaseAuth() { return initFirebase().auth; }
-  function getFirestore() { return initFirebase().db; }
-
-  async function loadUserProfile(firebaseUser) {
-    if (!firebaseUser) {
-      currentUser = null;
-      return null;
-    }
-
-    const doc = await getFirestore().collection('users').doc(firebaseUser.uid).get();
-    const stored = doc.exists ? doc.data() : {};
-    const profile = {
-      uid: firebaseUser.uid,
-      id: firebaseUser.uid,
-      name: stored.name || firebaseUser.displayName || 'Usuario',
-      email: (stored.email || firebaseUser.email || '').toLowerCase().trim(),
-      isAdmin: Boolean(stored.isAdmin),
-      createdAt: stored.createdAt || firebaseUser.metadata?.creationTime || new Date().toISOString(),
-    };
-    currentUser = profile;
-    return profile;
-  }
-
-  async function syncAuthState() {
-    const firebaseUser = getFirebaseAuth().currentUser;
-    if (!firebaseUser) {
-      currentUser = null;
-      updateHeaderUI();
-      return null;
-    }
-
-    const profile = await loadUserProfile(firebaseUser);
-    updateHeaderUI();
-    return profile;
+  function getDb() {
+    if (typeof window.getFirestoreDb === 'function') return window.getFirestoreDb();
+    if (window.db) return window.db;
+    throw new Error('Firestore no esta disponible.');
   }
 
   function getCurrentUser() { return currentUser; }
@@ -92,386 +39,416 @@ const Auth = (() => {
     };
   }
 
+  function isFirestorePermissionError(error) {
+    return error?.code === 'permission-denied'
+      || /Missing or insufficient permissions/i.test(error?.message || '');
+  }
+
+  function buildBasicProfile(firebaseUser, stored = {}) {
+    return {
+      uid: firebaseUser.uid,
+      id: firebaseUser.uid,
+      name: stored.name || firebaseUser.displayName || 'Usuario',
+      email: (stored.email || firebaseUser.email || '').toLowerCase().trim(),
+      isAdmin: Boolean(stored.isAdmin),
+      role: stored.role || 'customer',
+      createdAt: stored.createdAt || firebaseUser.metadata?.creationTime || new Date().toISOString(),
+    };
+  }
+
+  async function loadUserProfile(firebaseUser) {
+    if (!firebaseUser) {
+      currentUser = null;
+      return null;
+    }
+
+    let profile;
+    try {
+      const snapshot = await getDb().collection('users').doc(firebaseUser.uid).get();
+      const stored = snapshot.exists ? snapshot.data() : {};
+      profile = buildBasicProfile(firebaseUser, stored);
+    } catch (error) {
+      if (!isFirestorePermissionError(error)) throw error;
+      console.warn('No se pudo leer el perfil en Firestore. Se usara el usuario autenticado.', error);
+      profile = buildBasicProfile(firebaseUser);
+    }
+
+    currentUser = profile;
+    return profile;
+  }
+
+  function validateEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+  }
+
+  function validatePasswordPolicy(password) {
+    if (String(password || '').length < 8) {
+      return 'La contrasena debe tener al menos 8 caracteres.';
+    }
+    if (!/[a-z]/.test(password)) {
+      return 'La contrasena debe incluir al menos una letra minuscula.';
+    }
+    if (!/[A-Z]/.test(password)) {
+      return 'La contrasena debe incluir al menos una letra mayuscula.';
+    }
+    if (!/[0-9]/.test(password)) {
+      return 'La contrasena debe incluir al menos un numero.';
+    }
+    return '';
+  }
+
+  function showError(id, message) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = message;
+    el.removeAttribute('hidden');
+  }
+
+  function clearError(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = '';
+    el.setAttribute('hidden', '');
+  }
+
+  function clearFormErrors() {
+    [
+      'login-error',
+      'register-error',
+      'recovery-email-error',
+      'recovery-password-error',
+    ].forEach(clearError);
+  }
+
+  function setLoading(btnId, loading, defaultLabel) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Procesando...' : defaultLabel;
+  }
+
+  function showToastMessage(message, type = 'info') {
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, type);
+    }
+  }
+
   function updateHeaderUI() {
     const user = getCurrentUser();
     const label = document.getElementById('user-label');
     const btn = document.getElementById('user-btn');
-    const adminBtn = document.getElementById('admin-btn');
 
     if (label) {
-      label.textContent = user ? `👋 ${String(user.name || 'Usuario').split(' ')[0]}` : 'Iniciar sesión';
+      label.textContent = user ? `Hola, ${String(user.name || 'Usuario').split(' ')[0]}` : 'Iniciar sesion';
     }
     if (btn) {
-      btn.title = user
-        ? `${user.email} — Clic para cerrar sesión`
-        : 'Iniciar sesión o crear cuenta';
-    }
-    if (adminBtn) {
-      adminBtn.hidden = !(user?.isAdmin);
+      btn.title = user ? `${user.email} - Clic para cerrar sesion` : 'Iniciar sesion';
     }
   }
 
-  async function register(name, email, password) {
-    const auth = getFirebaseAuth();
-    const credential = await auth.createUserWithEmailAndPassword(email, password);
-    await credential.user.updateProfile({ displayName: name.trim() });
+  function buildRedirectUrl(defaultUrl = 'index.html') {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('redirect') || sessionStorage.getItem(REDIRECT_KEY) || defaultUrl;
+  }
 
-    const profile = {
+  function goToAuthPage(page) {
+    const current = `${window.location.pathname}${window.location.search}`;
+    sessionStorage.setItem(REDIRECT_KEY, current || 'index.html');
+    window.location.href = page;
+  }
+
+  function openModal() {
+    goToAuthPage('login.html');
+  }
+
+  function openRegister() {
+    goToAuthPage('register.html');
+  }
+
+  function closeModal() {
+    clearFormErrors();
+  }
+
+  function switchTabPublic(tab) {
+    window.location.href = tab === 'register' ? 'register.html' : 'login.html';
+  }
+
+  function requireAuth(onSuccess) {
+    if (isLoggedIn()) {
+      onSuccess?.();
+      return;
+    }
+    sessionStorage.setItem(REDIRECT_KEY, 'index.html');
+    window.location.href = 'login.html';
+  }
+
+  async function register(name, email, password) {
+    const normalizedEmail = String(email || '').toLowerCase().trim();
+    const credential = await getAuth().createUserWithEmailAndPassword(normalizedEmail, password);
+    await credential.user.updateProfile({ displayName: name.trim() });
+    await credential.user.getIdToken(true);
+
+    let profile = {
       uid: credential.user.uid,
       id: credential.user.uid,
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
+      role: 'customer',
+      isAdmin: false,
       createdAt: new Date().toISOString(),
-      role: 'customer'
     };
 
-    await getFirestore().collection('users').doc(credential.user.uid).set(profile, { merge: true });
+    try {
+      await getDb().collection('users').doc(credential.user.uid).set(profile, { merge: true });
+    } catch (error) {
+      if (!isFirestorePermissionError(error)) throw error;
+      console.warn('La cuenta fue creada, pero Firestore rechazo guardar el perfil.', error);
+      showToastMessage(
+        'La cuenta fue creada. Falta publicar las reglas de Firestore para guardar el perfil.',
+        'warning'
+      );
+      profile = buildBasicProfile(credential.user, profile);
+    }
+
     currentUser = profile;
     updateHeaderUI();
+    notifyAuthStateListeners(currentUser);
     return profile;
   }
 
   async function login(email, password) {
-    const auth = getFirebaseAuth();
-    const credential = await auth.signInWithEmailAndPassword(email, password);
+    const normalizedEmail = String(email || '').toLowerCase().trim();
+    const credential = await getAuth().signInWithEmailAndPassword(normalizedEmail, password);
     const profile = await loadUserProfile(credential.user);
     updateHeaderUI();
+    notifyAuthStateListeners(currentUser);
     return profile;
   }
 
   async function logout() {
     try {
-      await getFirebaseAuth().signOut();
+      await getAuth().signOut();
     } finally {
       currentUser = null;
       updateHeaderUI();
-      showToast('👋 Sesión cerrada. ¡Hasta pronto!', 'info');
+      notifyAuthStateListeners(null);
+      showToastMessage('Sesion cerrada. Hasta pronto.', 'info');
     }
-  }
-
-  function requireAuth(onSuccess) {
-    if (isLoggedIn()) { onSuccess?.(); return; }
-    successCallback = onSuccess;
-    openModal();
-  }
-
-  function openModal() {
-    const modal = document.getElementById('auth-modal');
-    if (!modal) return;
-    modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    switchTab('login');
-    setTimeout(() => document.getElementById('login-email')?.focus(), 200);
-  }
-
-  function openRegister() {
-    openModal();
-    switchTab('register');
-  }
-
-  function closeModal() {
-    const modal = document.getElementById('auth-modal');
-    if (!modal) return;
-    modal.classList.remove('open');
-    document.body.style.overflow = '';
-    successCallback = null;
-    clearFormErrors();
-  }
-
-  function validateEmail(value) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  }
-
-  function switchTab(tab) {
-    const isLogin = tab === 'login';
-    document.getElementById('tab-login')?.classList.toggle('active', isLogin);
-    document.getElementById('tab-register')?.classList.toggle('active', !isLogin);
-    document.getElementById('login-screen')?.[isLogin ? 'removeAttribute' : 'setAttribute']('hidden', '');
-    document.getElementById('register-screen')?.[isLogin ? 'setAttribute' : 'removeAttribute']('hidden', '');
-    clearFormErrors();
-    setTimeout(() => {
-      (isLogin ? document.getElementById('login-email') : document.getElementById('reg-name'))?.focus();
-    }, 80);
-  }
-
-  function switchTabPublic(tab) { switchTab(tab); }
-
-  function clearFormErrors() {
-    ['login-error', 'register-error', 'recovery-email-error', 'recovery-code-error', 'recovery-password-error'].forEach(id => {
-      const el = document.getElementById(id);
-      el?.setAttribute('hidden', '');
-      if (el) el.textContent = '';
-    });
-  }
-
-  function showError(id, msg) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = msg;
-    el.removeAttribute('hidden');
-  }
-
-  function setLoading(btnId, loading) {
-    const btn = document.getElementById(btnId);
-    if (!btn) return;
-    btn.disabled = loading;
-    const labels = { 'btn-login': 'Iniciar Sesión', 'btn-register': 'Crear Cuenta Gratuita' };
-    btn.innerHTML = loading ? '<span>⏳ Procesando…</span>' : `<span>${labels[btnId] || 'Enviar'}</span>`;
-  }
-
-  function showToastMessage(message, type = 'info') {
-    if (typeof showToast === 'function') {
-      showToast(message, type);
-    } else if (typeof window.showToast === 'function') {
-      window.showToast(message, type);
-    }
-  }
-
-  function openRecovery() {
-    closeModal();
-    const modal = document.getElementById('recovery-modal');
-    if (!modal) return;
-    modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    showRecoveryStep(pendingResetActionCode ? 3 : 1);
-    const emailInput = document.getElementById('recovery-email');
-    if (emailInput) {
-      emailInput.value = pendingResetEmail || '';
-    }
-    setTimeout(() => emailInput?.focus(), 200);
-  }
-
-  function closeRecovery() {
-    const modal = document.getElementById('recovery-modal');
-    if (!modal) return;
-    modal.classList.remove('open');
-    document.body.style.overflow = '';
-    pendingResetActionCode = null;
-    pendingResetEmail = null;
-  }
-
-  function showRecoveryStep(step) {
-    const formVisibility = {
-      'recovery-email-form': step === 1,
-      'recovery-code-form': step === 2,
-      'recovery-password-form': step === 3,
-      'recovery-step-4': step === 4,
-    };
-
-    Object.entries(formVisibility).forEach(([id, visible]) => {
-      document.getElementById(id)?.[visible ? 'removeAttribute' : 'setAttribute']('hidden', '');
-    });
-
-    [1, 2, 3, 4].forEach(n => {
-      document.getElementById(`recovery-step-${n}`)?.[n === step ? 'removeAttribute' : 'setAttribute']('hidden', '');
-    });
-
-    document.querySelectorAll('.rprogress-dot').forEach((dot, i) => {
-      dot.classList.toggle('active', i + 1 === step);
-      dot.classList.toggle('done', i + 1 < step);
-    });
   }
 
   async function sendRecoveryLink(email) {
-    const auth = getFirebaseAuth();
-    const normalizedEmail = email.toLowerCase().trim();
-    const actionCodeSettings = {
-      url: `${window.location.href.split('#')[0].split('?')[0]}?mode=resetPassword&email=${encodeURIComponent(normalizedEmail)}`,
-      handleCodeInApp: false
-    };
+    const normalizedEmail = String(email || '').toLowerCase().trim();
+    if (!validateEmail(normalizedEmail)) {
+      throw new Error('Ingresa un correo electronico valido.');
+    }
 
-    await auth.sendPasswordResetEmail(normalizedEmail, actionCodeSettings);
-    pendingResetEmail = normalizedEmail;
+    const baseUrl = `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, '')}reset-password.html`;
+    await getAuth().sendPasswordResetEmail(normalizedEmail, {
+      url: baseUrl,
+      handleCodeInApp: false,
+    });
     return normalizedEmail;
   }
 
-  async function confirmPasswordReset(newPass, confirm) {
-    if (newPass !== confirm) throw new Error('Las contraseñas no coinciden.');
-    if (newPass.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
-    if (!pendingResetActionCode) throw new Error('El enlace de recuperación ya no es válido. Solicita uno nuevo.');
-
-    const auth = getFirebaseAuth();
-    await auth.confirmPasswordReset(pendingResetActionCode, newPass);
-    pendingResetActionCode = null;
-    pendingResetEmail = null;
+  async function verifyResetToken(code) {
+    if (!code) throw new Error('El token de recuperacion no esta presente.');
+    return getAuth().verifyPasswordResetCode(code);
   }
 
-  function handlePasswordResetLink() {
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get('mode');
-    const code = params.get('oobCode');
-
-    if (mode !== 'resetPassword' || !code) return false;
-
-    pendingResetActionCode = code;
-    pendingResetEmail = params.get('email') || '';
-    openRecovery();
-    showRecoveryStep(3);
-
-    const title = document.getElementById('recovery-modal-title');
-    if (title) title.textContent = 'Establecer nueva contraseña';
-
-    const help = document.getElementById('recovery-email-display');
-    if (help) help.textContent = pendingResetEmail || 'tu correo';
-
-    return true;
+  async function confirmPasswordReset(code, newPass, confirm) {
+    if (!code) throw new Error('El token de recuperacion no esta presente.');
+    if (newPass !== confirm) throw new Error('Las contrasenas no coinciden.');
+    const policyError = validatePasswordPolicy(newPass);
+    if (policyError) throw new Error(policyError);
+    await getAuth().confirmPasswordReset(code, newPass);
   }
 
-  function init() {
-    updateHeaderUI();
-    initFirebase();
-    getFirebaseAuth().onAuthStateChanged(async user => {
-      if (user) {
-        try {
-          await loadUserProfile(user);
-        } catch (error) {
-          console.error('Firebase auth state error:', error);
-          currentUser = null;
-        }
-      } else {
-        currentUser = null;
-      }
-      updateHeaderUI();
-      notifyAuthStateListeners(currentUser);
-    });
-
-    handlePasswordResetLink();
-
-    document.getElementById('user-btn')?.addEventListener('click', () => {
-      isLoggedIn() ? logout() : openModal();
-    });
-
-    document.getElementById('auth-modal-close')?.addEventListener('click', closeModal);
-    document.getElementById('auth-modal')?.addEventListener('click', e => {
-      if (e.target === e.currentTarget) closeModal();
-    });
-
-    document.getElementById('tab-login')?.addEventListener('click', e => {
-      e.preventDefault();
-      switchTab('login');
-    });
-    document.getElementById('tab-register')?.addEventListener('click', e => {
-      e.preventDefault();
-      switchTab('register');
-    });
-
-    document.getElementById('btn-forgot-password')?.addEventListener('click', openRecovery);
-
+  function bindPasswordButtons() {
     document.querySelectorAll('.btn-show-pass').forEach(btn => {
       btn.addEventListener('click', () => {
         const input = document.getElementById(btn.dataset.target);
         if (!input) return;
         const showing = input.type === 'text';
         input.type = showing ? 'password' : 'text';
-        btn.textContent = showing ? '👁' : '🙈';
+        btn.textContent = showing ? 'Mostrar' : 'Ocultar';
       });
-    });
-
-    document.getElementById('login-form')?.addEventListener('submit', async e => {
-      e.preventDefault();
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
-      clearFormErrors();
-      if (!email) { showError('login-error', 'Ingresa tu correo electrónico.'); return; }
-      if (!validateEmail(email)) { showError('login-error', 'Ingresa un correo electrónico válido.'); return; }
-      if (!password) { showError('login-error', 'Ingresa tu contraseña.'); return; }
-      setLoading('btn-login', true);
-      try {
-        const user = await login(email, password);
-        showToastMessage(user?.isAdmin ? '⚙️ Bienvenido, Administrador' : `🎉 ¡Bienvenido de vuelta, ${String(user?.name || 'Usuario').split(' ')[0]}!`, 'success');
-        const cb = successCallback;
-        closeModal();
-        successCallback = null;
-        cb?.();
-      } catch (err) {
-        showError('login-error', err.message || 'No se pudo iniciar sesión.');
-      } finally {
-        setLoading('btn-login', false);
-      }
-    });
-
-    document.getElementById('register-form')?.addEventListener('submit', async e => {
-      e.preventDefault();
-      const name = document.getElementById('reg-name').value.trim();
-      const email = document.getElementById('reg-email').value.trim();
-      const password = document.getElementById('reg-password').value;
-      const confirm = document.getElementById('reg-confirm').value;
-      clearFormErrors();
-      if (!name) { showError('register-error', 'Ingresa tu nombre completo.'); return; }
-      if (!email) { showError('register-error', 'Ingresa tu correo electrónico.'); return; }
-      if (!validateEmail(email)) { showError('register-error', 'Ingresa un correo electrónico válido.'); return; }
-      if (password !== confirm) { showError('register-error', '⚠️ Las contraseñas no coinciden.'); return; }
-      if (password.length < 8) { showError('register-error', '⚠️ La contraseña debe tener al menos 8 caracteres.'); return; }
-      setLoading('btn-register', true);
-      try {
-        const user = await register(name, email, password);
-        showToastMessage(`🎉 ¡Cuenta creada! Bienvenido, ${String(user?.name || name).split(' ')[0]}`, 'success');
-        const cb = successCallback;
-        closeModal();
-        successCallback = null;
-        cb?.();
-      } catch (err) {
-        showError('register-error', err.message || 'No se pudo crear la cuenta.');
-      } finally {
-        setLoading('btn-register', false);
-      }
-    });
-
-    document.getElementById('recovery-modal-close')?.addEventListener('click', closeRecovery);
-    document.getElementById('recovery-modal')?.addEventListener('click', e => {
-      if (e.target === e.currentTarget) closeRecovery();
-    });
-    document.getElementById('btn-back-to-login')?.addEventListener('click', () => {
-      closeRecovery();
-      openModal();
-    });
-
-    document.getElementById('recovery-email-form')?.addEventListener('submit', async e => {
-      e.preventDefault();
-      const email = document.getElementById('recovery-email')?.value.trim();
-      const errEl = document.getElementById('recovery-email-error');
-      errEl?.setAttribute('hidden', '');
-      const btn = document.getElementById('btn-send-code');
-      if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando…'; }
-      try {
-        await sendRecoveryLink(email);
-        const dispEl = document.getElementById('recovery-email-display');
-        if (dispEl) dispEl.textContent = email;
-        showRecoveryStep(4);
-        showToastMessage('📧 Revisa tu correo para abrir el enlace seguro de recuperación.', 'info');
-      } catch (err) {
-        if (errEl) { errEl.textContent = err.message || 'No se pudo enviar el enlace de recuperación.'; errEl.removeAttribute('hidden'); }
-      } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Enviar enlace'; }
-      }
-    });
-
-    document.getElementById('recovery-password-form')?.addEventListener('submit', async e => {
-      e.preventDefault();
-      const newPass = document.getElementById('recovery-new-password')?.value;
-      const confPass = document.getElementById('recovery-confirm-password')?.value;
-      const errEl = document.getElementById('recovery-password-error');
-      errEl?.setAttribute('hidden', '');
-      try {
-        await confirmPasswordReset(newPass, confPass);
-        showRecoveryStep(4);
-        showToastMessage('✅ Contraseña actualizada. Ya puedes iniciar sesión.', 'success');
-      } catch (err) {
-        if (errEl) { errEl.textContent = err.message || 'No se pudo cambiar la contraseña.'; errEl.removeAttribute('hidden'); }
-      }
-    });
-
-    document.getElementById('btn-recovery-go-login')?.addEventListener('click', () => {
-      closeRecovery();
-      openModal();
-    });
-
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeModal(); closeRecovery(); }
     });
   }
 
-  return { init, requireAuth, isLoggedIn, getCurrentUser, logout, openModal, openRegister, closeModal, switchTabPublic, onAuthStateChanged };
+  function bindLoginPage() {
+    const form = document.getElementById('login-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      clearFormErrors();
+
+      const email = document.getElementById('login-email')?.value.trim();
+      const password = document.getElementById('login-password')?.value || '';
+
+      if (!validateEmail(email)) {
+        showError('login-error', 'Ingresa un correo electronico valido.');
+        return;
+      }
+      if (!password) {
+        showError('login-error', 'Ingresa tu contrasena.');
+        return;
+      }
+
+      setLoading('btn-login', true, 'Iniciar sesion');
+      try {
+        await login(email, password);
+        const redirect = buildRedirectUrl('index.html');
+        sessionStorage.removeItem(REDIRECT_KEY);
+        window.location.href = redirect;
+      } catch (err) {
+        showError('login-error', err.message || 'No se pudo iniciar sesion.');
+      } finally {
+        setLoading('btn-login', false, 'Iniciar sesion');
+      }
+    });
+
+    document.getElementById('btn-forgot-password')?.addEventListener('click', async () => {
+      clearFormErrors();
+      const email = document.getElementById('login-email')?.value.trim();
+      const btn = document.getElementById('btn-forgot-password');
+      if (btn) btn.disabled = true;
+      try {
+        const sentTo = await sendRecoveryLink(email);
+        showToastMessage(`Revisa ${sentTo} para abrir el enlace seguro de recuperacion.`, 'info');
+      } catch (err) {
+        showError('login-error', err.message || 'No se pudo enviar el enlace de recuperacion.');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  function bindRegisterPage() {
+    const form = document.getElementById('register-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      clearFormErrors();
+
+      const name = document.getElementById('reg-name')?.value.trim();
+      const email = document.getElementById('reg-email')?.value.trim();
+      const password = document.getElementById('reg-password')?.value || '';
+      const confirm = document.getElementById('reg-confirm')?.value || '';
+
+      if (!name) {
+        showError('register-error', 'Ingresa tu nombre completo.');
+        return;
+      }
+      if (!validateEmail(email)) {
+        showError('register-error', 'Ingresa un correo electronico valido.');
+        return;
+      }
+      if (password !== confirm) {
+        showError('register-error', 'Las contrasenas no coinciden.');
+        return;
+      }
+      const policyError = validatePasswordPolicy(password);
+      if (policyError) {
+        showError('register-error', policyError);
+        return;
+      }
+
+      setLoading('btn-register', true, 'Crear cuenta');
+      try {
+        await register(name, email, password);
+        const redirect = buildRedirectUrl('index.html');
+        sessionStorage.removeItem(REDIRECT_KEY);
+        window.location.href = redirect;
+      } catch (err) {
+        showError('register-error', err.message || 'No se pudo crear la cuenta.');
+      } finally {
+        setLoading('btn-register', false, 'Crear cuenta');
+      }
+    });
+  }
+
+  async function bindResetPasswordPage() {
+    const form = document.getElementById('recovery-password-form');
+    if (!form) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('oobCode');
+    const emailDisplay = document.getElementById('recovery-email-display');
+    const submit = document.getElementById('btn-reset-password');
+
+    try {
+      const email = await verifyResetToken(code);
+      if (emailDisplay) emailDisplay.textContent = email;
+      if (submit) submit.disabled = false;
+    } catch (err) {
+      showError('recovery-password-error', 'El token es invalido o ha expirado. Solicita un nuevo enlace.');
+      if (submit) submit.disabled = true;
+      return;
+    }
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      clearFormErrors();
+      const newPass = document.getElementById('recovery-new-password')?.value || '';
+      const confirm = document.getElementById('recovery-confirm-password')?.value || '';
+
+      if (submit) submit.disabled = true;
+      try {
+        await confirmPasswordReset(code, newPass, confirm);
+        showToastMessage('Contrasena actualizada. Ya puedes iniciar sesion.', 'success');
+        window.location.href = 'login.html';
+      } catch (err) {
+        showError('recovery-password-error', err.message || 'No se pudo cambiar la contrasena.');
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+  }
+
+  function bindHeader() {
+    document.getElementById('user-btn')?.addEventListener('click', () => {
+      isLoggedIn() ? logout() : openModal();
+    });
+  }
+
+  function init() {
+    if (initialized) return;
+    initialized = true;
+
+    getAuth().onAuthStateChanged(async firebaseUser => {
+      try {
+        currentUser = firebaseUser ? await loadUserProfile(firebaseUser) : null;
+      } catch (error) {
+        console.error('Firebase auth state error:', error);
+        currentUser = null;
+      }
+      updateHeaderUI();
+      notifyAuthStateListeners(currentUser);
+    });
+
+    updateHeaderUI();
+    bindHeader();
+    bindPasswordButtons();
+    bindLoginPage();
+    bindRegisterPage();
+    bindResetPasswordPage();
+  }
+
+  return {
+    init,
+    requireAuth,
+    isLoggedIn,
+    getCurrentUser,
+    logout,
+    openModal,
+    openRegister,
+    closeModal,
+    switchTabPublic,
+    onAuthStateChanged,
+    validatePasswordPolicy,
+  };
 })();
 
 window.Auth = Auth;

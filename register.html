@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediSupply - Crear cuenta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="auth-page">
+  <main class="auth-page-shell">
+    <a class="auth-page-logo" href="index.html" aria-label="Volver al catalogo">
+      <span class="logo-icon">+</span>
+      <span class="logo-text">Medi<span class="logo-accent">Supply</span></span>
+    </a>
+
+    <section class="auth-page-card" aria-labelledby="auth-page-title">
+      <div class="auth-header">
+        <span class="auth-logo" aria-hidden="true">+</span>
+        <h1 id="auth-page-title">Crear cuenta</h1>
+        <p>Registra tus datos para comprar insumos medicos y guardar tu historial.</p>
+      </div>
+
+      <form class="auth-form" id="register-form" autocomplete="on" novalidate>
+        <div class="form-group">
+          <label for="reg-name">Nombre completo</label>
+          <input type="text" id="reg-name" name="name" placeholder="Dr. Juan Perez" required autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="reg-email">Correo electronico</label>
+          <input type="email" id="reg-email" name="email" placeholder="correo@ejemplo.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Contrasena</label>
+          <div class="input-wrapper">
+            <input type="password" id="reg-password" name="password" placeholder="Minuscula, mayuscula y numero" required autocomplete="new-password" minlength="8">
+            <button type="button" class="btn-show-pass" data-target="reg-password" aria-label="Mostrar contrasena">Mostrar</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="reg-confirm">Confirmar contrasena</label>
+          <div class="input-wrapper">
+            <input type="password" id="reg-confirm" name="confirm" placeholder="Repite tu contrasena" required autocomplete="new-password">
+            <button type="button" class="btn-show-pass" data-target="reg-confirm" aria-label="Mostrar contrasena">Mostrar</button>
+          </div>
+        </div>
+        <div class="form-error" id="register-error" hidden role="alert"></div>
+        <button type="submit" class="btn-primary-full" id="btn-register">Crear cuenta</button>
+        <p class="auth-switch">
+          Ya tienes cuenta?
+          <a class="auth-link" href="login.html">Inicia sesion</a>
+        </p>
+      </form>
+    </section>
+  </main>
+
+  <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => Auth.init());
+  </script>
+</body>
+</html>
