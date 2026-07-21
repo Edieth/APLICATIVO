@@ -1,3 +1,58 @@
+/* ===== AUTH PAGES ===== */
+.auth-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(10, 132, 255, 0.18), transparent 34rem),
+    linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
+}
+
+.auth-page-shell {
+  min-height: 100vh;
+  width: min(100%, 520px);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+  display: grid;
+  align-content: center;
+  gap: var(--space-6);
+}
+
+.auth-page-logo {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 900;
+}
+
+.auth-page-logo .logo-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--r-full);
+  background: var(--primary);
+  color: white;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.auth-page-card {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--shadow-xl), inset 0 1px 0 rgba(255,255,255,0.04);
+  overflow: hidden;
+}
+
+.auth-page-card .auth-header h1 {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: var(--space-2);
+}
+
 /* ============================================================
    MEDISUPPLY — AUTH MODALS & ORDER CONFIRMATION STYLES
    ============================================================ */

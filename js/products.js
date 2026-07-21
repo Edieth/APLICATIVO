@@ -154,6 +154,7 @@ const Products = (() => {
 
           <div class="product-body">
             <h3 class="product-name">${p.name}</h3>
+            <span class="product-id" style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.5rem;font-family:monospace;">ID: ${p.id}</span>
             <p class="product-description">${p.description}</p>
           </div>
 
